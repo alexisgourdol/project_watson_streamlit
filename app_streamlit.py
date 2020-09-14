@@ -26,7 +26,7 @@ def user_input_language():
     return idiom
 
 def two_sentences(idiom):
-    data = pd.read_csv("../project_watson/project_watson/data/train.csv")
+    data = pd.read_csv("project_watson/data/train.csv")
     premise = data.premise[data.language == idiom].reset_index(drop=True)[np.random.randint(0,len(idiom))]
     hypothesis = data[data['premise'] == premise].hypothesis.values[0]
     return premise, hypothesis
