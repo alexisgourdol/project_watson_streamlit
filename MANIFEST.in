@@ -1,3 +1,0 @@
-graft project_watson
-global-exclude *.py[cod] __pycache__ *.so *.ipynb
-recursive-exclude  project_watson/jupy *
