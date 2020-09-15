@@ -1,5 +1,7 @@
 pandas
 numpy
 streamlit
-tensorflow
 transformers
+json
+requests
+tensorflow
