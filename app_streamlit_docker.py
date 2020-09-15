@@ -1,10 +1,12 @@
-from transformers import BertTokenizer, TFBertModel
 import requests
 import json
 import streamlit as st
 import pandas as pd
 import numpy as np
 import tensorflow as tf
+
+from transformers import BertTokenizer, TFBertModel
+from tensorflow.keras.preprocessing.sequence import pad_sequences
 
 def user_input_language():
     idiom = st.sidebar.selectbox(
@@ -67,12 +69,16 @@ def bert_encode(hypotheses, premises, tokenizer):
 def format_input(test, tokenizer):
     """Reduces #tokens to 50 (max_len), as expected by the model to predict."""
     test_input = bert_encode(test.premise.values, test.hypothesis.values, tokenizer)
-
     # take the 1st 50 tokens of the 20 first lines and convert to list. Why 20 ? No reason, could be 1...
-    test_input_slice = {'input_word_ids': tf.slice(test_input['input_word_ids'], [0, 0], [1, 50]).numpy().tolist(),
-                        'input_mask' : tf.slice(test_input['input_mask'], [0, 0], [1, 50]).numpy().tolist(),
-                        'input_type_ids' : tf.slice(test_input['input_type_ids'], [0, 0], [1, 50]).numpy().tolist()}
-
+    token_num = test_input['input_word_ids'].shape[1]
+    if token_num >= 50 :
+        test_input_slice = {'input_word_ids': tf.slice(test_input['input_word_ids'], [0, 0], [20, 50]).numpy().tolist(),
+                            'input_mask' : tf.slice(test_input['input_mask'], [0, 0], [20, 50]).numpy().tolist(),
+                            'input_type_ids' : tf.slice(test_input['input_type_ids'], [0, 0], [20, 50]).numpy().tolist()}
+    else:
+        test_input_slice = {'input_word_ids': pad_sequences(test_input["input_word_ids"], maxlen=50, padding='post').tolist(),
+                            'input_mask': pad_sequences(test_input["input_mask"], maxlen=50, padding='post').tolist(),
+                            'input_type_ids': pad_sequences(test_input["input_type_ids"], maxlen=50, padding='post').tolist()}
     #format data as expected by the model for a prediction AND KEEP ONLY THE 1ST LINE (TO DO : refactor)
     # ==> {'instances': [{'input_word_ids': [101, 10111, ... 11762] , 'input_mask': [1, 1, ... 1], 'input_type_ids': [0, 0, ... 0]
 
