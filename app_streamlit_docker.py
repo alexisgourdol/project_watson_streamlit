@@ -8,28 +8,36 @@ import tensorflow as tf
 from transformers import BertTokenizer, TFBertModel
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 
-def user_input_language():
-    idiom = st.sidebar.selectbox(
-        "",
-        ([
-            "Arabic",
-            "Bulgarian",
-            "Chinese",
-            "English",
-            "French",
-            "German",
-            "Greek",
-            "Hindi",
-            "Russian",
-            "Spanish",
-            "Swahili",
-            "Thai",
-            "Turkish",
-            "Urdu",
-            "Vietnamese"
-            ])
-        )
-    return idiom
+# CSS = """
+# body {
+#     background-image: url(https://cdn.pixabay.com/photo/2017/08/30/01/05/milky-way-2695569_960_720.jpg);
+#     background-size: cover;
+# }
+# """
+# st.write(f'<style>{CSS}</style>', unsafe_allow_html=True)
+
+# def user_input_language():
+#     idiom = st.sidebar.selectbox(
+#         "",
+#         ([
+#             "Arabic",
+#             "Bulgarian",
+#             "Chinese",
+#             "English",
+#             "French",
+#             "German",
+#             "Greek",
+#             "Hindi,
+#             "Russian",
+#             "Spanish",
+#             "Swahili",
+#             "Thai",
+#             "Turkish",
+#             "Urdu",
+#             "Vietnamese"
+#             ])
+#         )
+    # return idiom
 
 # def two_sentences(idiom):
 #     data = pd.read_csv("project_watson/data/train.csv")
@@ -90,43 +98,46 @@ def format_input(test, tokenizer):
 
     return data
 
-# def predict(data, url=URL_PREDICTION ):
-#     r = requests.post(url, data=json.dumps(data))
-#     return r.text
+def predict(data, url='http://34.78.186.53/v1/models/bert-base:predict'):
+    response = requests.post(
+        url=url,
+        headers={
+            "Host": "bert-base-model.default.example.com"
+        },
+        data=json.dumps(data)
+    )
+    return response.json()['predictions'][0]
 
 def main():
 
     #TITLE
-    st.write("""
-    # Project Watson
-    Hello *world!*
-    """)
+    # st.markdown(f'<style>{CSS}</style>', unsafe_allow_html=True)
+    # st.(<style> h1{color: blue;}"Contradictory, my dear Watson"</style>, unsafe_allow_html=True)
     #SLIDEBAR
-    st.sidebar.header("Pick a language")
-    idiom = user_input_language()
+    # st.sidebar.header("Start with picking a language")
+    # idiom = user_input_language()
+    # CLASS LABELS
+    st.sidebar.subheader('Class labels')
+    st.sidebar.write(pd.DataFrame(data={
+        "label" : [0,1,2],
+        "evaluation" : ["Entailment","Neutral","Contradiction"]
+        }).set_index("evaluation"))
 
     #INPUT PARAMETERS
-    st.subheader('Your turn!')
+    st.subheader('Write your statements below!')
     user_premise = st.text_area("Your premise here")
     user_hypothesis = st.text_area("Your hypothesis here")
     data = {'premise': [user_premise], 'hypothesis': [user_hypothesis]}
     df_two_sentences = pd.DataFrame(data=data)
     st.table(df_two_sentences)
 
-    #CLASS LABELS
-    # st.subheader('Class labels')
-    # st.write(pd.DataFrame(data={
-    #     "label" : [0,1,2],
-    #     "evaluation" : ["Entailment","Neutral","Contradiction"]
-    #     }).set_index("evaluation"))
-    # st.write(predictions)
-
     test = df_two_sentences
-
     embedded_s = format_input(test, tokenizer)
 
-    # predict(df)
-    st.write(pd.DataFrame(data=embedded_s))
+    predictions = predict(embedded_s)
+    st.write(predictions)
+
+    # st.write(pd.DataFrame(data=embedded_s))
 
 if __name__ == "__main__":
     model_name = 'bert-base-multilingual-cased'
