@@ -54,5 +54,9 @@ def main():
         "evaluation" : ["Entailment","Neutral","Contradiction"]
         }).set_index("evaluation"))
 
+    #LANGUAGES (not in this version)
+    # st.sidebar.header("Start with picking a language")
+    # idiom = user_input_language()
+
 if __name__ == "__main__":
     main()

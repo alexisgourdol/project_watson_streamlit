@@ -8,42 +8,30 @@ import tensorflow as tf
 from transformers import BertTokenizer, TFBertModel
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 
-# CSS = """
-# body {
-#     background-image: url(https://cdn.pixabay.com/photo/2017/08/30/01/05/milky-way-2695569_960_720.jpg);
-#     background-size: cover;
-# }
-# """
-# st.write(f'<style>{CSS}</style>', unsafe_allow_html=True)
+#CSS STYLE
+CSS = """
+body {
+    background-image: url(https://images.pexels.com/photos/3109168/pexels-photo-3109168.jpeg?auto=compress&cs=tinysrgb&dpr=3&h=750&w=1260);
+    background-size: cover;
+}
 
-# def user_input_language():
-#     idiom = st.sidebar.selectbox(
-#         "",
-#         ([
-#             "Arabic",
-#             "Bulgarian",
-#             "Chinese",
-#             "English",
-#             "French",
-#             "German",
-#             "Greek",
-#             "Hindi,
-#             "Russian",
-#             "Spanish",
-#             "Swahili",
-#             "Thai",
-#             "Turkish",
-#             "Urdu",
-#             "Vietnamese"
-#             ])
-#         )
-    # return idiom
+.block-container {
+    # background-color: rgba(255,255,255,.2);
+    background-color: rgba(0,0,0,.2);
+}
 
-# def two_sentences(idiom):
-#     data = pd.read_csv("project_watson/data/train.csv")
-#     premise = data.premise[data.language == idiom].reset_index(drop=True)[np.random.randint(0,len(idiom))]
-#     hypothesis = data[data['premise'] == premise].hypothesis.values[0]
-#     return premise, hypothesis
+.block-container div {
+    # background-color: green;
+}
+
+.element-container {
+    # background-color: blue;
+}
+
+"""
+
+st.write(f'<style>{CSS}</style>',
+    unsafe_allow_html=True)
 
 def encode_sentence(s):
     """ Encode One sentence s using the tokenizer defined in this .py"""
@@ -98,11 +86,11 @@ def format_input(test, tokenizer):
 
     return data
 
-def predict(data, url='http://34.78.186.53/v1/models/bert-base:predict'):
+def predict(data, url="http://104.155.26.32/v1/models/bert-base:predict"):
     response = requests.post(
         url=url,
         headers={
-            "Host": "bert-base-model.default.example.com"
+            "Host": "bert-base.default.example.com"
         },
         data=json.dumps(data)
     )
@@ -111,33 +99,27 @@ def predict(data, url='http://34.78.186.53/v1/models/bert-base:predict'):
 def main():
 
     #TITLE
-    # st.markdown(f'<style>{CSS}</style>', unsafe_allow_html=True)
-    # st.(<style> h1{color: blue;}"Contradictory, my dear Watson"</style>, unsafe_allow_html=True)
-    #SLIDEBAR
-    # st.sidebar.header("Start with picking a language")
-    # idiom = user_input_language()
-    # CLASS LABELS
-    st.sidebar.subheader('Class labels')
-    st.sidebar.write(pd.DataFrame(data={
-        "label" : [0,1,2],
-        "evaluation" : ["Entailment","Neutral","Contradiction"]
-        }).set_index("evaluation"))
+    st.markdown("""
+        # Contradictory, My Dear Watson :male-detective:
+        """, unsafe_allow_html=True)
+    st.markdown('<style>h1{color: #C2C6C8;}</style>', unsafe_allow_html=True)
 
-    #INPUT PARAMETERS
-    st.subheader('Write your statements below!')
-    user_premise = st.text_area("Your premise here")
-    user_hypothesis = st.text_area("Your hypothesis here")
+    user_premise = st.text_area("Your premise here:")
+
+    #USER INPUT
+    user_hypothesis = st.text_area("Your hypothesis here:")
     data = {'premise': [user_premise], 'hypothesis': [user_hypothesis]}
     df_two_sentences = pd.DataFrame(data=data)
-    st.table(df_two_sentences)
+    st.table(df_two_sentences.assign(hack="").set_index("hack"))
 
+
+    #PREDICTIONS
     test = df_two_sentences
     embedded_s = format_input(test, tokenizer)
+    df_proba = pd.DataFrame(predict(embedded_s), columns=["probability"]).rename({0: "Entailment", 1: "Neutral", 2: "Contradiction"}, axis='index').round(2)
+    st.write(df_proba.style.highlight_max(color="#AEE3AA", axis=0))
+    st.write(f"""The predicted relationship is **{df_proba.idxmax()[0]}**""")
 
-    predictions = predict(embedded_s)
-    st.write(predictions)
-
-    # st.write(pd.DataFrame(data=embedded_s))
 
 if __name__ == "__main__":
     model_name = 'bert-base-multilingual-cased'
