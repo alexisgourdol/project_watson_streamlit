@@ -3,4 +3,3 @@ numpy
 streamlit
 transformers
 requests
-tensorflow
