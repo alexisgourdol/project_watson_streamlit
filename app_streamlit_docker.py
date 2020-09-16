@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 import tensorflow as tf
 
-from transformers import BertTokenizer, TFBertModel
+from transformers import BertTokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 
 #CSS STYLE
