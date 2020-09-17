@@ -4,8 +4,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import tensorflow as tf
-
-from transformers import BertTokenizer
+from transformers import AutoTokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 
 #CSS STYLE
@@ -16,16 +15,39 @@ body {
 }
 
 .block-container {
-    # background-color: rgba(255,255,255,.2);
-    background-color: rgba(0,0,0,.2);
+    background-color: rgba(0,0,0,.4);
 }
 
 .block-container div {
-    # background-color: green;
+    # background-color: background-color: rgba(0,0,0,.6);
 }
 
 .element-container {
     # background-color: blue;
+}
+
+h1 {
+    text-align: center;
+    font-family: "Trebuchet MS", Helvetica, sans-serif;
+    color: #EEE8AA;
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
+}
+
+h2 {
+    font-family: "Trebuchet MS", Helvetica, sans-serif;
+    color: #FFE4E1;
+    font-weight: bold;
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
+}
+
+h3 {
+    font-family: "Trebuchet MS", Helvetica, sans-serif;
+    font-weight: bold;
+    color: white;
+}
+
+.fullScreenFrame :nth-child(1) {
+    background-color: white;
 }
 
 """
@@ -65,18 +87,11 @@ def bert_encode(hypotheses, premises, tokenizer):
 def format_input(test, tokenizer):
     """Reduces #tokens to 50 (max_len), as expected by the model to predict."""
     test_input = bert_encode(test.premise.values, test.hypothesis.values, tokenizer)
-    # take the 1st 50 tokens of the 20 first lines and convert to list. Why 20 ? No reason, could be 1...
     token_num = test_input['input_word_ids'].shape[1]
-    if token_num >= 50 :
-        test_input_slice = {'input_word_ids': tf.slice(test_input['input_word_ids'], [0, 0], [20, 50]).numpy().tolist(),
-                            'input_mask' : tf.slice(test_input['input_mask'], [0, 0], [20, 50]).numpy().tolist(),
-                            'input_type_ids' : tf.slice(test_input['input_type_ids'], [0, 0], [20, 50]).numpy().tolist()}
-    else:
-        test_input_slice = {'input_word_ids': pad_sequences(test_input["input_word_ids"], maxlen=50, padding='post').tolist(),
-                            'input_mask': pad_sequences(test_input["input_mask"], maxlen=50, padding='post').tolist(),
-                            'input_type_ids': pad_sequences(test_input["input_type_ids"], maxlen=50, padding='post').tolist()}
-    #format data as expected by the model for a prediction AND KEEP ONLY THE 1ST LINE (TO DO : refactor)
-    # ==> {'instances': [{'input_word_ids': [101, 10111, ... 11762] , 'input_mask': [1, 1, ... 1], 'input_type_ids': [0, 0, ... 0]
+
+    test_input_slice = {'input_word_ids': pad_sequences(test_input["input_word_ids"], maxlen=50, padding='post', truncating='post').tolist(),
+                        'input_mask': pad_sequences(test_input["input_mask"], maxlen=50, padding='post', truncating='post').tolist(),
+                        'input_type_ids': pad_sequences(test_input["input_type_ids"], maxlen=50, padding='post', truncating='post').tolist()}
 
     data = {}
     for k in test_input_slice.keys():
@@ -86,7 +101,8 @@ def format_input(test, tokenizer):
 
     return data
 
-def predict(data, url="http://104.155.26.32/v1/models/bert-base:predict"):
+#BERT
+def predict_bert(data, url="http://104.155.26.32/v1/models/bert-base:predict"):
     response = requests.post(
         url=url,
         headers={
@@ -96,32 +112,55 @@ def predict(data, url="http://104.155.26.32/v1/models/bert-base:predict"):
     )
     return response.json()['predictions'][0]
 
-def main():
+#ROBERTA
+def predict_roberta(data, url="http://104.155.26.32/v1/models/roberta:predict"):
+    response = requests.post(
+        url=url,
+        headers={
+            "Host": "roberta.default.example.com"
+        },
+        data=json.dumps(data)
+    )
+    return response.json()['predictions'][0]
 
+def main():
     #TITLE
     st.markdown("""
-        # Contradictory, My Dear Watson :male-detective:
-        """, unsafe_allow_html=True)
-    st.markdown('<style>h1{color: #C2C6C8;}</style>', unsafe_allow_html=True)
-
-    user_premise = st.text_area("Your premise here:")
+        # Contradictory, My Dear Watson
+        """)
 
     #USER INPUT
-    user_hypothesis = st.text_area("Your hypothesis here:")
+    st.markdown("""
+        ### Your premise here:
+        """)
+    user_premise = st.text_area("")
+    st.markdown("""
+        ### Your hypothesis here:
+        """)
+    user_hypothesis = st.text_area(" ")
     data = {'premise': [user_premise], 'hypothesis': [user_hypothesis]}
     df_two_sentences = pd.DataFrame(data=data)
     st.table(df_two_sentences.assign(hack="").set_index("hack"))
 
-
     #PREDICTIONS
-    test = df_two_sentences
-    embedded_s = format_input(test, tokenizer)
-    df_proba = pd.DataFrame(predict(embedded_s), columns=["probability"]).rename({0: "Entailment", 1: "Neutral", 2: "Contradiction"}, axis='index').round(2)
-    st.write(df_proba.style.highlight_max(color="#AEE3AA", axis=0))
-    st.write(f"""The predicted relationship is **{df_proba.idxmax()[0]}**""")
+    embedded_s = format_input(df_two_sentences, tokenizer)
+
+    #BERT
+    df_proba = pd.DataFrame(predict_bert(embedded_s), columns=["probability"]).rename({0: "Entailment", 1: "Neutral", 2: "Contradiction"}, axis='index').round(2)
+    #ROBERTA
+    #df_proba = pd.DataFrame(predict_roberta(embedded_s), columns=["probability"]).rename({0: "Entailment", 1: "Neutral", 2: "Contradiction"}, axis='index').round(2)
+
+    st.write(f""" ## The predicted relationship is **{df_proba.idxmax()[0]}** :male-detective:""")
+
+    if st.checkbox("show probabilities"):
+        st.write(df_proba.style.background_gradient(cmap='magma').highlight_max(color="#AEE3AA", axis=0))
 
 
 if __name__ == "__main__":
+    #BERT
     model_name = 'bert-base-multilingual-cased'
-    tokenizer = BertTokenizer.from_pretrained(model_name)
+    #ROBERTA
+    #model_name = 'roberta-large'
+
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
     main()
