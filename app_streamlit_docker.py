@@ -55,7 +55,7 @@ h3 {
 st.write(f'<style>{CSS}</style>',
     unsafe_allow_html=True)
 
-def encode_sentence(s):
+def encode_sentence(s, tokenizer):
     """ Encode One sentence s using the tokenizer defined in this .py"""
     tokens = list(tokenizer.tokenize(s))
     tokens.append('[SEP]')
@@ -65,8 +65,8 @@ def bert_encode(hypotheses, premises, tokenizer):
     """Returns a mathematical representation of the text inputs using the defined
     tokenizer. The model expects 'input_word_ids', 'input_mask', 'input_type_ids'"""
 
-    sentence1 = tf.ragged.constant([encode_sentence(s) for s in np.array(hypotheses)])
-    sentence2 = tf.ragged.constant([encode_sentence(s) for s in np.array(premises)])
+    sentence1 = tf.ragged.constant([encode_sentence(s, tokenizer) for s in np.array(hypotheses)])
+    sentence2 = tf.ragged.constant([encode_sentence(s, tokenizer) for s in np.array(premises)])
 
     cls = [tokenizer.convert_tokens_to_ids(['[CLS]'])]*sentence1.shape[0]
     input_word_ids = tf.concat([cls, sentence1, sentence2], axis=-1)
@@ -101,6 +101,20 @@ def format_input(test, tokenizer):
 
     return data
 
+def choose_model():
+    st.markdown("""
+        ### Select a model
+        """)
+
+    model = st.selectbox("",["BERT", "roBERTa"],1)
+
+    if model == 'BERT':
+        model_name = 'bert-base-multilingual-cased'
+    else:
+        model_name = 'roberta-large'
+
+    return model_name
+
 #BERT
 def predict_bert(data, url="http://104.155.26.32/v1/models/bert-base:predict"):
     response = requests.post(
@@ -126,41 +140,40 @@ def predict_roberta(data, url="http://104.155.26.32/v1/models/roberta:predict"):
 def main():
     #TITLE
     st.markdown("""
-        # Contradictory, My Dear Watson
+        # Contradictory, My Dear Watson!
         """)
 
     #USER INPUT
     st.markdown("""
-        ### Your premise here:
+        ### Your premise:
         """)
     user_premise = st.text_area("")
     st.markdown("""
-        ### Your hypothesis here:
+        ### Your hypothesis:
         """)
     user_hypothesis = st.text_area(" ")
     data = {'premise': [user_premise], 'hypothesis': [user_hypothesis]}
     df_two_sentences = pd.DataFrame(data=data)
-    st.table(df_two_sentences.assign(hack="").set_index("hack"))
+
+    model_name = choose_model()
 
     #PREDICTIONS
-    embedded_s = format_input(df_two_sentences, tokenizer)
+    embedded_s = format_input(df_two_sentences, AutoTokenizer.from_pretrained(model_name))
 
-    #BERT
-    df_proba = pd.DataFrame(predict_bert(embedded_s), columns=["probability"]).rename({0: "Entailment", 1: "Neutral", 2: "Contradiction"}, axis='index').round(2)
-    #ROBERTA
-    #df_proba = pd.DataFrame(predict_roberta(embedded_s), columns=["probability"]).rename({0: "Entailment", 1: "Neutral", 2: "Contradiction"}, axis='index').round(2)
+    if user_hypothesis != "":
+        #BERT
+        if model_name == "bert-base-multilingual-cased":
+            df_proba = pd.DataFrame(predict_bert(embedded_s), columns=["probability"]).rename({0: "Entailment", 1: "Neutral", 2: "Contradiction"}, axis='index').round(2)
+        #ROBERTA
+        else:
+            embedded_s["instances"][0]["input_type_ids"] = 50*[0]
+            df_proba = pd.DataFrame(predict_roberta(embedded_s), columns=["probability"]).rename({0: "Entailment", 1: "Neutral", 2: "Contradiction"}, axis='index').round(2)
 
-    st.write(f""" ## The predicted relationship is **{df_proba.idxmax()[0]}** :male-detective:""")
+        st.write(f""" ## The predicted relationship is **{df_proba.idxmax()[0]}** :male-detective:""")
 
-    if st.checkbox("show probabilities"):
-        st.write(df_proba.style.background_gradient(cmap='magma').highlight_max(color="#AEE3AA", axis=0))
+        if st.checkbox("show probabilities"):
+            st.write(df_proba.style.background_gradient(cmap='magma').highlight_max(color="#AEE3AA", axis=0))
 
 
 if __name__ == "__main__":
-    #BERT
-    model_name = 'bert-base-multilingual-cased'
-    #ROBERTA
-    #model_name = 'roberta-large'
-
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
     main()
