@@ -1,0 +1,5 @@
+runtime: custom
+env: flex
+entrypoint: gunicorn -b :8501 main:app
+runtime_config:
+  python_version: 3
