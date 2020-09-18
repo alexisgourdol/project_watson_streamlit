@@ -4,3 +4,4 @@ streamlit
 transformers
 requests
 tensorflow
+matplotlib
